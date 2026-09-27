@@ -1,0 +1,101 @@
+bundle:
+  name: github-databricks-s08
+
+# ─────────────────────────────────────────────
+# Variables por entorno
+# ─────────────────────────────────────────────
+variables:
+  catalog_name:
+    default: main
+  schema_name:
+    default: s08_storage
+  volume_name:
+    default: archivos_multimedia
+
+# ─────────────────────────────────────────────
+# Artefactos (notebooks)
+# ─────────────────────────────────────────────
+artifacts:
+  notebooks:
+    type: files
+    source_code_path: .
+
+# ─────────────────────────────────────────────
+# Recursos: Jobs de Databricks
+# ─────────────────────────────────────────────
+resources:
+  jobs:
+    pipeline_s08:
+      name: "S08 - Pipeline Completo"
+      description: "Pipeline que ejecuta todos los notebooks en secuencia"
+
+      tasks:
+        - task_key: exploracion_datos
+          description: "Exploración y carga de datos"
+          notebook_task:
+            notebook_path: ./notebooks/01_exploracion_datos.py
+            source: GIT
+          new_cluster:
+            spark_version: "15.4.x-scala2.12"
+            node_type_id: i3.xlarge
+            num_workers: 1
+            spark_conf:
+              spark.databricks.delta.preview.enabled: "true"
+
+        - task_key: transformaciones
+          description: "Transformaciones ETL"
+          depends_on:
+            - task_key: exploracion_datos
+          notebook_task:
+            notebook_path: ./notebooks/02_transformaciones.py
+            source: GIT
+          new_cluster:
+            spark_version: "15.4.x-scala2.12"
+            node_type_id: i3.xlarge
+            num_workers: 1
+
+        - task_key: volumen_archivos
+          description: "Gestión de Volumen y archivos"
+          depends_on:
+            - task_key: transformaciones
+          notebook_task:
+            notebook_path: ./volumen/04_volumen_archivos.py
+            source: GIT
+          new_cluster:
+            spark_version: "15.4.x-scala2.12"
+            node_type_id: i3.xlarge
+            num_workers: 1
+
+      # Trigger: ejecutar al hacer push en main
+      trigger:
+        pause_status: UNPAUSED
+        file_arrival:
+          url: "https://github.com/juancondorijara/github-databricks"
+
+      # Notificaciones por email (opcional)
+      email_notifications:
+        on_failure:
+          - juan.condori@example.com
+        on_success:
+          - juan.condori@example.com
+
+# ─────────────────────────────────────────────
+# Targets (ambientes)
+# ─────────────────────────────────────────────
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: ${var.DATABRICKS_HOST}
+    variables:
+      catalog_name: dev_catalog
+      schema_name: dev_s08
+
+  prod:
+    mode: production
+    workspace:
+      host: ${var.DATABRICKS_HOST}
+    variables:
+      catalog_name: main
+      schema_name: s08_storage

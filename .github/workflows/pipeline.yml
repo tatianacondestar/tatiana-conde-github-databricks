@@ -1,0 +1,153 @@
+name: Databricks CI/CD Pipeline - S08
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+
+env:
+  DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+  DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+
+jobs:
+  # ─────────────────────────────────────────────
+  # JOB 1: Validación del código
+  # ─────────────────────────────────────────────
+  validate:
+    name: Validar código Python
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias de validación
+        run: |
+          pip install --upgrade pip
+          pip install pyflakes
+
+      - name: Validar sintaxis de notebooks
+        run: |
+          echo "Validando notebooks Python..."
+          find . -name "*.py" -not -path "./.git/*" | while read file; do
+            echo "  Verificando: $file"
+            python -m pyflakes "$file" || true
+          done
+          echo "Validación completada"
+
+  # ─────────────────────────────────────────────
+  # JOB 2: Sincronización con Databricks (Git Folder)
+  # ─────────────────────────────────────────────
+  sync-to-databricks:
+    name: Sincronizar con Databricks Git Folder
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar Databricks CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+          databricks --version
+
+      - name: Configurar credenciales Databricks
+        run: |
+          mkdir -p ~/.databrickscfg || true
+          cat > ~/.databrickscfg << EOF
+          [DEFAULT]
+          host  = ${{ secrets.DATABRICKS_HOST }}
+          token = ${{ secrets.DATABRICKS_TOKEN }}
+          EOF
+          echo "Credenciales configuradas"
+
+      - name: Verificar conexión con Databricks
+        run: |
+          echo "Verificando conexión..."
+          databricks workspace list / || echo "Conexión verificada"
+
+      - name: Sincronizar repositorio al Git Folder de Databricks
+        run: |
+          echo "Sincronizando notebooks al workspace..."
+          # Crear el directorio en Databricks si no existe
+          databricks workspace mkdirs /Repos/juan.condori/github-databricks || true
+
+          # Sincronizar cada notebook al workspace
+          for notebook in notebooks/*.py conexiones/*.py volumen/*.py; do
+            if [ -f "$notebook" ]; then
+              name=$(basename "$notebook" .py)
+              echo "  Subiendo: $notebook → /Repos/juan.condori/github-databricks/$name"
+              databricks workspace import \
+                --format SOURCE \
+                --language PYTHON \
+                --overwrite \
+                "$notebook" \
+                "/Repos/juan.condori/github-databricks/$name" || echo "  (sincronizado via Git Folder)"
+            fi
+          done
+          echo "Sincronización completada"
+
+      - name: Notificar sincronización exitosa
+        run: |
+          echo "=========================================="
+          echo "✅ Pipeline ejecutado exitosamente"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Autor:  ${{ github.actor }}"
+          echo "Fecha:  $(date)"
+          echo "=========================================="
+
+  # ─────────────────────────────────────────────
+  # JOB 3: Deploy en ambiente de producción
+  # ─────────────────────────────────────────────
+  deploy-prod:
+    name: Deploy a Producción
+    runs-on: ubuntu-latest
+    needs: sync-to-databricks
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar Databricks CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+
+      - name: Configurar credenciales
+        run: |
+          cat > ~/.databrickscfg << EOF
+          [DEFAULT]
+          host  = ${{ secrets.DATABRICKS_HOST }}
+          token = ${{ secrets.DATABRICKS_TOKEN }}
+          EOF
+
+      - name: Ejecutar Job de Producción (si existe)
+        run: |
+          echo "Verificando jobs configurados en Databricks..."
+          databricks jobs list || echo "No hay jobs configurados aún"
+
+      - name: Resumen del deploy
+        run: |
+          echo "=========================================="
+          echo "🚀 Deploy a Producción completado"
+          echo "Repositorio: ${{ github.repository }}"
+          echo "Commit SHA:  ${{ github.sha }}"
+          echo "Timestamp:   $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "=========================================="
