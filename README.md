@@ -1,28 +1,35 @@
-# github-databricks — S08 AP4
-**Estudiante:** Juan Gabriel Condori Jara  
+# github-databricks — S08 AP4 · S11 AP5-AP6
+**Estudiante:** Tatiana Conde  
 **Curso:** Fundamentos de Inteligencia Artificial — ASE242_FIA  
-**Sesión:** 08 | Databricks e Integraciones  
+**Sesiones:** 08 | Databricks e Integraciones · 11 | S3 y Genie Agents  
 
 ---
 
 ## Estructura del proyecto
 
 ```
-github-databricks/
+tatiana-conde-github-databricks/
 ├── .github/
 │   └── workflows/
-│       └── pipeline.yml          ← Pipeline CI/CD GitHub Actions
+│       └── pipeline.yml                  ← Pipeline CI/CD GitHub Actions
 ├── notebooks/
-│   ├── 01_exploracion_datos.py   ← Carga y análisis de datos en Spark
-│   └── 02_transformaciones.py    ← Pipeline ETL con Delta Lake
+│   ├── 01_exploracion_datos.py           ← Carga y análisis de datos en Spark
+│   └── 02_transformaciones.py            ← Pipeline ETL con Delta Lake
 ├── conexiones/
-│   └── 03_conexiones_externas.py ← Documentación de las 3 conexiones
+│   ├── 03_conexiones_externas.py         ← Documentación de las 3 conexiones
+│   ├── 03_conexion_github.py             ← Conexión GitHub
+│   ├── 03_conexion_s3.py                 ← Conexión Amazon S3
+│   └── 03_conexion_rds.py                ← Conexión Amazon RDS
+├── sql/                                  ← ✅ NUEVO — S11
+│   ├── 01_catalog_schema.sql             ← Crea catalog + schema + tabla
+│   ├── 02_carga_s3_a_tabla.py            ← Carga S3 → catalog.schema.tabla
+│   └── 03_genie_agents_consultas.py      ← 5 consultas con Genie Agents AI
 ├── volumen/
-│   └── 04_volumen_archivos.py    ← Gestión de Volume para imágenes/PDFs
+│   └── 04_volumen_archivos.py            ← Gestión de Volume
 ├── cli/
-│   ├── databricks_cli_demo.sh         ← Demo CLI Linux/Mac
-│   └── databricks_cli_demo_windows.ps1← Demo CLI Windows
-├── databricks.yml                ← Configuración del bundle Databricks
+│   ├── databricks_cli_demo.sh            ← Demo CLI Linux/Mac
+│   └── databricks_cli_demo_windows.ps1   ← Demo CLI Windows
+├── databricks.yml                        ← Configuración del bundle Databricks
 └── README.md
 ```
 
@@ -231,3 +238,66 @@ Puedes verlo en: **tu-repo → Actions**
 | `conexiones/03_conexion_s3.py` | Conecta con Amazon S3: lista bucket, lee y escribe CSV y Parquet |
 | `conexiones/03_conexion_rds.py` | Conecta con Amazon RDS PostgreSQL: escribe y lee tablas via JDBC |
 | `volumen/04_volumen_archivos.py` | Crea el Volume, sube archivos y registra en tabla del catálogo |
+
+---
+
+## 🆕 Sesión 11 — S3 y Genie Agents
+
+### Estructura catalog.schema.tabla
+
+```sql
+tatiana_catalog              ← Catalog creado con SQL
+  └── s11_ventas             ← Schema
+        └── productos_s3     ← Tabla Delta (datos desde S3)
+```
+
+**Notebook:** `sql/01_catalog_schema.sql`
+
+### Flujo de datos S3 → Databricks
+
+```
+Amazon S3 (Free Tier)
+  └── bucket: tatiana-conde-databricks
+        └── golden/ventas_s11/  ←── CSV de ventas
+              │
+              ▼
+        Databricks (Spark)
+              │
+              ▼
+  tatiana_catalog.s11_ventas.productos_s3  (Delta Lake)
+              │
+              ▼
+        Genie Agents (AI) ← consultas en lenguaje natural
+```
+
+**Notebook de carga:** `sql/02_carga_s3_a_tabla.py`
+
+### Consultas Genie Agents (5 mínimas)
+
+| # | Pregunta en Genie | Técnica SQL |
+|---|---|---|
+| 1 | Total de ventas por categoría | GROUP BY + SUM |
+| 2 | Top 5 productos en Lima | WHERE + ORDER BY + LIMIT |
+| 3 | Precio promedio por ciudad | GROUP BY + AVG |
+| 4 | Productos sobre precio promedio | Subconsulta |
+| 5 | Ranking de ventas por mes | Window Function RANK() |
+
+**Notebook:** `sql/03_genie_agents_consultas.py`
+
+### Pasos para conectar tu S3 en Databricks
+
+1. Crea bucket S3 en tu cuenta AWS personal (región `us-east-1`)
+2. Crea usuario IAM con política `AmazonS3FullAccess`
+3. Genera y guarda el **Access Key ID** y **Secret Access Key**
+4. En Databricks, abre el notebook `sql/02_carga_s3_a_tabla.py`
+5. Completa los widgets con tus credenciales y nombre del bucket
+6. Ejecuta todas las celdas — los datos quedarán en `tatiana_catalog.s11_ventas.productos_s3`
+7. Ve a **Genie Agents** en el panel izquierdo de Databricks
+8. Crea un nuevo Space y selecciona la tabla `tatiana_catalog.s11_ventas.productos_s3`
+9. Haz las 5 preguntas en lenguaje natural y copia el SQL generado
+
+| Archivo S11 | Descripción |
+|---|---|
+| `sql/01_catalog_schema.sql` | Crea `tatiana_catalog`, schema `s11_ventas` y tabla `productos_s3` |
+| `sql/02_carga_s3_a_tabla.py` | Conecta S3, lee CSV Golden y carga en la tabla Delta |
+| `sql/03_genie_agents_consultas.py` | 5 consultas SQL + Python generadas con Genie AI |

@@ -1,14 +1,14 @@
 bundle:
-  name: github-databricks-s08
+  name: tatiana-conde-github-databricks-s11
 
 # ─────────────────────────────────────────────
 # Variables por entorno
 # ─────────────────────────────────────────────
 variables:
   catalog_name:
-    default: main
+    default: tatiana_catalog
   schema_name:
-    default: s08_storage
+    default: s11_ventas
   volume_name:
     default: archivos_multimedia
 
@@ -25,9 +25,9 @@ artifacts:
 # ─────────────────────────────────────────────
 resources:
   jobs:
-    pipeline_s08:
-      name: "S08 - Pipeline Completo"
-      description: "Pipeline que ejecuta todos los notebooks en secuencia"
+    pipeline_s11:
+      name: "S11 - Pipeline S3 + Genie Agents"
+      description: "Pipeline completo: S3 → catalog.schema.tabla → consultas"
 
       tasks:
         - task_key: exploracion_datos
@@ -48,6 +48,30 @@ resources:
             - task_key: exploracion_datos
           notebook_task:
             notebook_path: ./notebooks/02_transformaciones.py
+            source: GIT
+          new_cluster:
+            spark_version: "15.4.x-scala2.12"
+            node_type_id: i3.xlarge
+            num_workers: 1
+
+        - task_key: carga_s3_a_tabla
+          description: "Conexión S3 → tatiana_catalog.s11_ventas.productos_s3"
+          depends_on:
+            - task_key: transformaciones
+          notebook_task:
+            notebook_path: ./sql/02_carga_s3_a_tabla.py
+            source: GIT
+          new_cluster:
+            spark_version: "15.4.x-scala2.12"
+            node_type_id: i3.xlarge
+            num_workers: 1
+
+        - task_key: genie_consultas
+          description: "5 consultas Genie Agents sobre la tabla Delta"
+          depends_on:
+            - task_key: carga_s3_a_tabla
+          notebook_task:
+            notebook_path: ./sql/03_genie_agents_consultas.py
             source: GIT
           new_cluster:
             spark_version: "15.4.x-scala2.12"
