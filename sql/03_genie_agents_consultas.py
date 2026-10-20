@@ -5,11 +5,11 @@
 # MAGIC Tatiana Conde
 # MAGIC
 # MAGIC Este notebook contiene las **5 consultas mínimas** generadas con ayuda de
-# MAGIC Databricks Genie (AI) sobre la tabla `tatiana_catalog.s11_ventas.productos_s3`.
+# MAGIC Databricks Genie (AI) sobre la tabla `ggrrr.s11_ventas.productos_s3`.
 # MAGIC
 # MAGIC > **¿Cómo usar Genie?**
 # MAGIC > En el panel izquierdo de Databricks → **Genie Agents** → New Space →
-# MAGIC > selecciona la tabla `tatiana_catalog.s11_ventas.productos_s3` → haz preguntas
+# MAGIC > selecciona la tabla `ggrrr.s11_ventas.productos_s3` → haz preguntas
 # MAGIC > en lenguaje natural. El SQL generado por Genie se copia aquí.
 
 # COMMAND ----------
@@ -20,10 +20,10 @@
 # COMMAND ----------
 
 # Usar el catalog y schema correctos
-spark.sql("USE CATALOG tatiana_catalog")
+spark.sql("USE CATALOG ggrrr")
 spark.sql("USE SCHEMA s11_ventas")
 
-print("✅ Usando: tatiana_catalog.s11_ventas")
+print("✅ Usando: ggrrr.s11_ventas")
 spark.sql("SHOW TABLES").show()
 
 # COMMAND ----------
@@ -44,7 +44,7 @@ spark.sql("SHOW TABLES").show()
 # MAGIC   SUM(cantidad)                              AS unidades_vendidas,
 # MAGIC   ROUND(SUM(precio * cantidad), 2)           AS total_ventas_usd,
 # MAGIC   ROUND(AVG(precio), 2)                      AS precio_promedio
-# MAGIC FROM tatiana_catalog.s11_ventas.productos_s3
+# MAGIC FROM ggrrr.s11_ventas.productos_s3
 # MAGIC GROUP BY categoria
 # MAGIC ORDER BY total_ventas_usd DESC;
 
@@ -65,7 +65,7 @@ spark.sql("SHOW TABLES").show()
 # MAGIC   precio,
 # MAGIC   cantidad,
 # MAGIC   ROUND(precio * cantidad, 2)  AS ingreso_total
-# MAGIC FROM tatiana_catalog.s11_ventas.productos_s3
+# MAGIC FROM ggrrr.s11_ventas.productos_s3
 # MAGIC WHERE ciudad = 'Lima'
 # MAGIC ORDER BY ingreso_total DESC
 # MAGIC LIMIT 5;
@@ -88,7 +88,7 @@ spark.sql("SHOW TABLES").show()
 # MAGIC   MAX(precio)                   AS precio_maximo,
 # MAGIC   MIN(precio)                   AS precio_minimo,
 # MAGIC   ROUND(SUM(precio * cantidad), 2) AS facturacion_total
-# MAGIC FROM tatiana_catalog.s11_ventas.productos_s3
+# MAGIC FROM ggrrr.s11_ventas.productos_s3
 # MAGIC GROUP BY ciudad
 # MAGIC ORDER BY facturacion_total DESC;
 
@@ -109,9 +109,9 @@ spark.sql("SHOW TABLES").show()
 # MAGIC   categoria,
 # MAGIC   precio,
 # MAGIC   ROUND(precio - avg_general.precio_avg, 2) AS diferencia_con_promedio
-# MAGIC FROM tatiana_catalog.s11_ventas.productos_s3,
+# MAGIC FROM ggrrr.s11_ventas.productos_s3,
 # MAGIC      (SELECT ROUND(AVG(precio), 2) AS precio_avg
-# MAGIC       FROM tatiana_catalog.s11_ventas.productos_s3) AS avg_general
+# MAGIC       FROM ggrrr.s11_ventas.productos_s3) AS avg_general
 # MAGIC WHERE precio > avg_general.precio_avg
 # MAGIC ORDER BY precio DESC;
 
@@ -135,7 +135,7 @@ spark.sql("SHOW TABLES").show()
 # MAGIC     PARTITION BY DATE_FORMAT(fecha, 'yyyy-MM')
 # MAGIC     ORDER BY precio * cantidad DESC
 # MAGIC   )                                      AS ranking_mes
-# MAGIC FROM tatiana_catalog.s11_ventas.productos_s3
+# MAGIC FROM ggrrr.s11_ventas.productos_s3
 # MAGIC ORDER BY mes, ranking_mes;
 
 # COMMAND ----------
@@ -149,7 +149,7 @@ spark.sql("SHOW TABLES").show()
 from pyspark.sql.functions import col, sum as _sum, avg, max, min, count, round as _round, rank
 from pyspark.sql.window import Window
 
-df = spark.table("tatiana_catalog.s11_ventas.productos_s3")
+df = spark.table("ggrrr.s11_ventas.productos_s3")
 
 # Resumen general
 print("📊 Resumen General de Ventas")

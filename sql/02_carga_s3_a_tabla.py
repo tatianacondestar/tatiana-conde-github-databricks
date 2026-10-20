@@ -7,7 +7,7 @@
 # MAGIC Este notebook:
 # MAGIC 1. Se conecta a Amazon S3 con credenciales personales
 # MAGIC 2. Lee un archivo CSV desde S3
-# MAGIC 3. Guarda los datos en `tatiana_catalog.s11_ventas.productos_s3`
+# MAGIC 3. Guarda los datos en `ggrrr.s11_ventas.productos_s3`
 
 # COMMAND ----------
 
@@ -115,9 +115,9 @@ except Exception as e:
 
 # MAGIC %sql
 # MAGIC -- Asegurar que el catalog y schema existen
-# MAGIC CREATE CATALOG IF NOT EXISTS tatiana_catalog;
-# MAGIC CREATE SCHEMA  IF NOT EXISTS tatiana_catalog.s11_ventas;
-# MAGIC USE CATALOG tatiana_catalog;
+# MAGIC CREATE CATALOG IF NOT EXISTS ggrrr;
+# MAGIC CREATE SCHEMA  IF NOT EXISTS ggrrr.s11_ventas;
+# MAGIC USE CATALOG ggrrr;
 # MAGIC USE SCHEMA   s11_ventas;
 
 # COMMAND ----------
@@ -142,20 +142,20 @@ df_desde_s3.write \
     .format("delta") \
     .mode("overwrite") \
     .option("overwriteSchema", "true") \
-    .saveAsTable("tatiana_catalog.s11_ventas.productos_s3")
+    .saveAsTable("ggrrr.s11_ventas.productos_s3")
 
-print("✅ Tabla cargada: tatiana_catalog.s11_ventas.productos_s3")
+print("✅ Tabla cargada: ggrrr.s11_ventas.productos_s3")
 
 # COMMAND ----------
 
 # Verificar la carga
-spark.sql("SELECT * FROM tatiana_catalog.s11_ventas.productos_s3").show()
-print(f"Total registros: {spark.sql('SELECT COUNT(*) FROM tatiana_catalog.s11_ventas.productos_s3').collect()[0][0]}")
+spark.sql("SELECT * FROM ggrrr.s11_ventas.productos_s3").show()
+print(f"Total registros: {spark.sql('SELECT COUNT(*) FROM ggrrr.s11_ventas.productos_s3').collect()[0][0]}")
 
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC ## ✅ Pipeline S3 → Catalog completado
 # MAGIC - Datos escritos en S3 (Golden layer)
-# MAGIC - Tabla Delta creada en `tatiana_catalog.s11_ventas.productos_s3`
+# MAGIC - Tabla Delta creada en `ggrrr.s11_ventas.productos_s3`
 # MAGIC - Lista para consultas con Genie Agents

@@ -1,32 +1,29 @@
 -- ============================================================
 -- Sesión 11 | Databricks: S3 y Genie Agents
 -- Tatiana Conde
--- Creación de Catalog, Schema y Tabla conectada a S3
+-- Creación de Schema y Tabla conectada a S3
+-- Catalog usado: ggrrr (existente en el workspace)
 -- ============================================================
 
 -- ────────────────────────────────────────────
--- 1. Crear el Catalog
+-- 1. Usar el Catalog existente
 -- ────────────────────────────────────────────
-CREATE CATALOG IF NOT EXISTS tatiana_catalog
-  COMMENT 'Catálogo personal de Tatiana Conde - S11';
-
--- Usar el catálogo recién creado
-USE CATALOG tatiana_catalog;
+USE CATALOG ggrrr;
 
 -- ────────────────────────────────────────────
 -- 2. Crear el Schema (base de datos)
 -- ────────────────────────────────────────────
-CREATE SCHEMA IF NOT EXISTS tatiana_catalog.s11_ventas
+CREATE SCHEMA IF NOT EXISTS ggrrr.s11_ventas
   COMMENT 'Schema para datos de ventas - Sesión 11';
 
 -- Usar el schema
-USE SCHEMA tatiana_catalog.s11_ventas;
+USE SCHEMA ggrrr.s11_ventas;
 
 -- ────────────────────────────────────────────
--- 3. Crear tabla Delta vacía en el schema
+-- 3. Crear tabla Delta en el schema
 --    (los datos vendrán de S3 vía el notebook Python)
 -- ────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS tatiana_catalog.s11_ventas.productos_s3 (
+CREATE TABLE IF NOT EXISTS ggrrr.s11_ventas.productos_s3 (
   id          INT        COMMENT 'Identificador único del producto',
   producto    STRING     COMMENT 'Nombre del producto',
   precio      DOUBLE     COMMENT 'Precio unitario en USD',
@@ -39,11 +36,10 @@ USING DELTA
 COMMENT 'Tabla de productos cargados desde Amazon S3 (Golden/Silver)';
 
 -- Verificar que la tabla existe
-DESCRIBE TABLE EXTENDED tatiana_catalog.s11_ventas.productos_s3;
+DESCRIBE TABLE EXTENDED ggrrr.s11_ventas.productos_s3;
 
 -- ────────────────────────────────────────────
 -- 4. Verificar estructura creada
 -- ────────────────────────────────────────────
-SHOW CATALOGS;
-SHOW SCHEMAS IN tatiana_catalog;
-SHOW TABLES IN tatiana_catalog.s11_ventas;
+SHOW SCHEMAS IN ggrrr;
+SHOW TABLES IN ggrrr.s11_ventas;
