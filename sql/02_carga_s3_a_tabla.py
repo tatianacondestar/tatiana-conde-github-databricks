@@ -5,15 +5,6 @@
 # MAGIC Tatiana Conde — Proyecto IPD (Instituto Peruano del Deporte)
 # MAGIC
 # MAGIC Flujo: S3 Golden → ggrrr.s11_ipd.deportistas_s3 (Delta Lake)
-# MAGIC
-# MAGIC **Instrucciones:** Ingresa tus credenciales AWS en los widgets de arriba antes de ejecutar.
-
-# COMMAND ----------
-
-dbutils.widgets.text("aws_access_key", "", "AWS Access Key ID")
-dbutils.widgets.text("aws_secret_key", "", "AWS Secret Access Key")
-dbutils.widgets.text("bucket_name",    "tatiana-conde-databricks", "Bucket S3")
-dbutils.widgets.text("region",         "us-east-2", "Region AWS")
 
 # COMMAND ----------
 
@@ -24,10 +15,11 @@ dbutils.widgets.text("region",         "us-east-2", "Region AWS")
 
 import boto3, pandas as pd, io
 
-AWS_KEY    = dbutils.widgets.get("aws_access_key")
-AWS_SECRET = dbutils.widgets.get("aws_secret_key")
-BUCKET     = dbutils.widgets.get("bucket_name")
-REGION     = dbutils.widgets.get("region")
+# Reemplaza con tus credenciales AWS IAM (no subir al repo)
+AWS_KEY    = ""  # tu Access Key ID
+AWS_SECRET = ""  # tu Secret Access Key
+BUCKET     = "tatiana-conde-databricks"
+REGION     = "us-east-2"
 
 s3 = boto3.client('s3',
     region_name=REGION,
@@ -44,28 +36,35 @@ print(f"Conexion S3 lista: s3://{BUCKET}/golden/ipd/")
 # COMMAND ----------
 
 response = s3.list_objects_v2(Bucket=BUCKET, Prefix='golden/ipd/')
+print("Archivos en S3:")
 for obj in response.get('Contents', []):
-    print(f"  {obj['Key']} — {round(obj['Size']/1024, 2)} KB")
+    print(f"  {obj['Key']} — {round(obj['Size']/1024,2)} KB")
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Paso 3: Leer CSV IPD desde S3
+# MAGIC ## Paso 3: Leer CSV IPD desde S3 (Golden layer)
 
 # COMMAND ----------
 
-obj = s3.get_object(Bucket=BUCKET, Key='golden/ipd/ventas_s11.csv')
+obj     = s3.get_object(Bucket=BUCKET, Key='golden/ipd/ventas_s11.csv')
 df_pandas = pd.read_csv(io.BytesIO(obj['Body'].read()))
-df_ipd = spark.createDataFrame(df_pandas)
+df_ipd  = spark.createDataFrame(df_pandas)
 
-print(f"Registros IPD leidos desde S3: {df_ipd.count()}")
+print(f"Registros leidos: {df_ipd.count()}")
+df_ipd.show(10)
+
+# COMMAND ----------
+
+# df_ipd ya esta definido en la celda anterior
+print(f"Registros IPD: {df_ipd.count()}")
 df_ipd.printSchema()
 df_ipd.show(10)
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Paso 4: Crear schema y guardar en Delta Lake
+# MAGIC ## Paso 4: Guardar en ggrrr.s11_ipd.deportistas_s3 (Delta Lake)
 
 # COMMAND ----------
 
@@ -97,6 +96,6 @@ print("Tabla guardada: ggrrr.s11_ipd.deportistas_s3")
 
 # MAGIC %md
 # MAGIC ## Pipeline completado
-# MAGIC - Bucket S3: `tatiana-conde-databricks/golden/ipd/`
+# MAGIC - Bucket S3: `s3://tatiana-conde-databricks/golden/ipd/`
 # MAGIC - Tabla Delta: `ggrrr.s11_ipd.deportistas_s3`
-# MAGIC - Lista para consultas con Genie Agents
+# MAGIC - 20 deportistas IPD cargados correctamente
