@@ -52,7 +52,7 @@
 # MAGIC FROM ggrrr.s11_ipd.deportistas_s3
 # MAGIC GROUP BY deportista, federacion, departamento
 # MAGIC ORDER BY total_pad DESC
-# MAGIC LIMIT 10;
+# MAGIC LIMIT 50;
 
 # COMMAND ----------
 

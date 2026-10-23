@@ -38,7 +38,7 @@ SELECT
 FROM ggrrr.s11_ipd.deportistas_s3
 GROUP BY deportista, federacion, departamento
 ORDER BY total_pad DESC
-LIMIT 10;
+LIMIT 50;
 
 -- ============================================================
 -- CONSULTA 3: Participaciones internacionales por departamento
