@@ -2,6 +2,7 @@
 -- Sesión 11 | Databricks: S3 y Genie Agents
 -- Tatiana Conde — Proyecto IPD (Instituto Peruano del Deporte)
 -- Estructura: ggrrr.s11_ipd.deportistas_s3
+-- Archivo fuente: ipd_deportistas_real.csv (50 registros)
 -- EJECUTAR EN: SQL Editor de Databricks
 -- ============================================================
 
@@ -22,7 +23,7 @@ CREATE TABLE IF NOT EXISTS ggrrr.s11_ipd.deportistas_s3 (
   monto_pad     DOUBLE  COMMENT 'Monto de apoyo PAD en soles'
 )
 USING DELTA
-COMMENT 'Deportistas IPD cargados desde Amazon S3 - Golden layer';
+COMMENT 'Deportistas IPD cargados desde Amazon S3 - Golden layer - 50 registros';
 
 -- 3. Verificar
 SHOW TABLES IN ggrrr.s11_ipd;

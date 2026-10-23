@@ -47,12 +47,12 @@ for obj in response.get('Contents', []):
 
 # COMMAND ----------
 
-obj     = s3.get_object(Bucket=BUCKET, Key='golden/ipd/ventas_s11.csv')
+obj     = s3.get_object(Bucket=BUCKET, Key='golden/ipd/ipd_deportistas_real.csv')
 df_pandas = pd.read_csv(io.BytesIO(obj['Body'].read()))
 df_ipd  = spark.createDataFrame(df_pandas)
 
 print(f"Registros leidos: {df_ipd.count()}")
-df_ipd.show(10)
+df_ipd.show(50, truncate=False)
 
 # COMMAND ----------
 
@@ -98,4 +98,4 @@ print("Tabla guardada: ggrrr.s11_ipd.deportistas_s3")
 # MAGIC ## Pipeline completado
 # MAGIC - Bucket S3: `s3://tatiana-conde-databricks/golden/ipd/`
 # MAGIC - Tabla Delta: `ggrrr.s11_ipd.deportistas_s3`
-# MAGIC - 20 deportistas IPD cargados correctamente
+# MAGIC - 50 deportistas IPD cargados correctamente

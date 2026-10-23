@@ -5,6 +5,7 @@
 # MAGIC Tatiana Conde — Proyecto IPD
 # MAGIC
 # MAGIC Tabla: `ggrrr.s11_ipd.deportistas_s3`
+# MAGIC Archivo fuente: `ipd_deportistas_real.csv` (50 registros)
 
 # COMMAND ----------
 
