@@ -21,9 +21,10 @@ tatiana-conde-github-databricks/
 │   ├── 03_conexion_s3.py                 ← Conexión Amazon S3
 │   └── 03_conexion_rds.py                ← Conexión Amazon RDS
 ├── sql/                                  ← ✅ NUEVO — S11
-│   ├── 01_catalog_schema.sql             ← Crea catalog + schema + tabla
-│   ├── 02_carga_s3_a_tabla.py            ← Carga S3 → catalog.schema.tabla
-│   └── 03_genie_agents_consultas.py      ← 5 consultas con Genie Agents AI
+│   ├── 01_catalog_schema.sql             ← Crea catalog + schema + tabla Delta
+│   ├── 02_carga_s3_a_tabla.py            ← Carga S3 → ggrrr.s11_ipd.deportistas_s3
+│   ├── 03_genie_agents_consultas.py      ← 5 consultas %sql para notebook
+│   └── 04_consultas_ipd.sql              ← 5 consultas SQL puras (SQL Editor)
 ├── volumen/
 │   └── 04_volumen_archivos.py            ← Gestión de Volume
 ├── cli/
@@ -246,25 +247,44 @@ Puedes verlo en: **tu-repo → Actions**
 ### Estructura catalog.schema.tabla
 
 ```sql
-tatiana_catalog              ← Catalog creado con SQL
-  └── s11_ventas             ← Schema
-        └── productos_s3     ← Tabla Delta (datos desde S3)
+ggrrr                        ← Catalog
+  └── s11_ipd                ← Schema
+        └── deportistas_s3   ← Tabla Delta (datos IPD desde S3)
 ```
 
-**Notebook:** `sql/01_catalog_schema.sql`
+**Archivo:** `sql/01_catalog_schema.sql`
+
+### Dataset IPD — Instituto Peruano del Deporte
+
+| Campo | Descripción |
+|---|---|
+| `federacion` | Federación deportiva (20 disciplinas) |
+| `deportista` | Nombre del deportista |
+| `evento` | Evento internacional |
+| `pais_evento` | País donde se realizó el evento |
+| `especialidad` | Prueba o especialidad deportiva |
+| `puesto` | Puesto obtenido (1-8) |
+| `departamento` | Departamento de origen (25 regiones) |
+| `anio` | Año de participación (2019-2024) |
+| `monto_pad` | Monto de apoyo PAD en soles |
+
+- **Archivo fuente:** `ipd_deportistas_real.csv`
+- **Total registros:** 3,200
+- **Bucket S3:** `tatiana-conde-databricks`
+- **Ruta S3:** `golden/ipd/ipd_deportistas_real.csv`
 
 ### Flujo de datos S3 → Databricks
 
 ```
-Amazon S3 (Free Tier)
+Amazon S3
   └── bucket: tatiana-conde-databricks
-        └── golden/ventas_s11/  ←── CSV de ventas
+        └── golden/ipd/ipd_deportistas_real.csv  (3,200 registros)
               │
               ▼
         Databricks (Spark)
               │
               ▼
-  tatiana_catalog.s11_ventas.productos_s3  (Delta Lake)
+  ggrrr.s11_ipd.deportistas_s3  (Delta Lake)
               │
               ▼
         Genie Agents (AI) ← consultas en lenguaje natural
@@ -272,32 +292,31 @@ Amazon S3 (Free Tier)
 
 **Notebook de carga:** `sql/02_carga_s3_a_tabla.py`
 
-### Consultas Genie Agents (5 mínimas)
+### Consultas SQL — 5 consultas sobre datos IPD
 
-| # | Pregunta en Genie | Técnica SQL |
+| # | Consulta | Técnica SQL |
 |---|---|---|
-| 1 | Total de ventas por categoría | GROUP BY + SUM |
-| 2 | Top 5 productos en Lima | WHERE + ORDER BY + LIMIT |
-| 3 | Precio promedio por ciudad | GROUP BY + AVG |
-| 4 | Productos sobre precio promedio | Subconsulta |
-| 5 | Ranking de ventas por mes | Window Function RANK() |
+| 1 | Medallero por federación (oros, platas, bronces) | CASE WHEN + GROUP BY |
+| 2 | Top 10 deportistas con mayor apoyo PAD | SUM + GROUP BY + LIMIT |
+| 3 | Participaciones internacionales por departamento | COUNT DISTINCT |
+| 4 | Eventos con mayor participación peruana | GROUP BY múltiple |
+| 5 | Ranking de deportistas por año | Window Function RANK() |
 
-**Notebook:** `sql/03_genie_agents_consultas.py`
+**Archivos SQL:**
+- `sql/03_genie_agents_consultas.py` — notebook Databricks con `%sql`
+- `sql/04_consultas_ipd.sql` — SQL puro para el SQL Editor de Databricks
 
-### Pasos para conectar tu S3 en Databricks
+### Pasos para ejecutar
 
-1. Crea bucket S3 en tu cuenta AWS personal (región `us-east-1`)
-2. Crea usuario IAM con política `AmazonS3FullAccess`
-3. Genera y guarda el **Access Key ID** y **Secret Access Key**
-4. En Databricks, abre el notebook `sql/02_carga_s3_a_tabla.py`
-5. Completa los widgets con tus credenciales y nombre del bucket
-6. Ejecuta todas las celdas — los datos quedarán en `tatiana_catalog.s11_ventas.productos_s3`
-7. Ve a **Genie Agents** en el panel izquierdo de Databricks
-8. Crea un nuevo Space y selecciona la tabla `tatiana_catalog.s11_ventas.productos_s3`
-9. Haz las 5 preguntas en lenguaje natural y copia el SQL generado
+1. Sube `ipd_deportistas_real.csv` a S3: `golden/ipd/`
+2. En Databricks ejecuta `sql/01_catalog_schema.sql` en el SQL Editor
+3. Abre y ejecuta `sql/02_carga_s3_a_tabla.py` (carga los 3,200 registros)
+4. Ejecuta `sql/04_consultas_ipd.sql` en el SQL Editor para ver las 5 consultas
+5. Ve a **Genie Agents** → crea un Space con `ggrrr.s11_ipd.deportistas_s3`
 
 | Archivo S11 | Descripción |
 |---|---|
-| `sql/01_catalog_schema.sql` | Crea `tatiana_catalog`, schema `s11_ventas` y tabla `productos_s3` |
-| `sql/02_carga_s3_a_tabla.py` | Conecta S3, lee CSV Golden y carga en la tabla Delta |
-| `sql/03_genie_agents_consultas.py` | 5 consultas SQL + Python generadas con Genie AI |
+| `sql/01_catalog_schema.sql` | Crea schema `ggrrr.s11_ipd` y tabla `deportistas_s3` |
+| `sql/02_carga_s3_a_tabla.py` | Conecta S3, lee CSV y carga 3,200 registros en Delta Lake |
+| `sql/03_genie_agents_consultas.py` | 5 consultas SQL con `%sql` para notebook Databricks |
+| `sql/04_consultas_ipd.sql` | 5 consultas SQL puras para el SQL Editor de Databricks |
