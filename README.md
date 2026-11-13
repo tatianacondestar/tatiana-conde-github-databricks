@@ -24,7 +24,8 @@ tatiana-conde-github-databricks/
 │   ├── 01_catalog_schema.sql             ← Crea catalog + schema + tabla Delta
 │   ├── 02_carga_s3_a_tabla.py            ← Carga S3 → ggrrr.s11_ipd.deportistas_s3
 │   ├── 03_genie_agents_consultas.py      ← 5 consultas %sql para notebook
-│   └── 04_consultas_ipd.sql              ← 5 consultas SQL puras (SQL Editor)
+│   ├── 04_consultas_ipd.sql              ← 5 consultas SQL puras (SQL Editor)
+│   └── 05_predicciones_ipd.py            ← 3 predicciones a futuro (Python + regresión)
 ├── volumen/
 │   └── 04_volumen_archivos.py            ← Gestión de Volume
 ├── cli/
@@ -306,17 +307,37 @@ Amazon S3
 - `sql/03_genie_agents_consultas.py` — notebook Databricks con `%sql`
 - `sql/04_consultas_ipd.sql` — SQL puro para el SQL Editor de Databricks
 
+### Predicciones a Futuro — 3 predicciones con Genie Agents + Python
+
+| # | Predicción | Método | Horizonte |
+|---|---|---|---|
+| 1 | **Federaciones con mayor éxito en 2025** | Regresión lineal sobre puesto promedio histórico | 2025 |
+| 2 | **Tendencia de inversión PAD 2025-2026** | Regresión lineal sobre monto PAD total anual | 2025-2026 |
+| 3 | **Departamentos en riesgo de perder representación** | Regresión lineal sobre participaciones anuales | 2025 |
+
+**Pregunta a Genie Agent para cada predicción:**
+- **P1:** *"¿Qué federaciones tienen mejor tendencia de resultados y podrían ganar más en 2025?"*
+- **P2:** *"¿Cómo va a crecer la inversión PAD del IPD en los próximos años?"*
+- **P3:** *"¿Qué departamentos están perdiendo deportistas en competencias internacionales?"*
+
+**Archivo de predicciones:** `sql/05_predicciones_ipd.py`
+
+> Las predicciones se describen con capturas de Genie Agent en el documento del entregable.
+> Basadas en tendencias históricas 2019-2024 con regresión lineal.
+
 ### Pasos para ejecutar
 
 1. Sube `ipd_deportistas_real.csv` a S3: `golden/ipd/`
 2. En Databricks ejecuta `sql/01_catalog_schema.sql` en el SQL Editor
-3. Abre y ejecuta `sql/02_carga_s3_a_tabla.py` (carga los 3,200 registros)
+3. Abre y ejecuta `sql/02_carga_s3_a_tabla.py` (carga los registros)
 4. Ejecuta `sql/04_consultas_ipd.sql` en el SQL Editor para ver las 5 consultas
 5. Ve a **Genie Agents** → crea un Space con `ggrrr.s11_ipd.deportistas_s3`
+6. Ejecuta `sql/05_predicciones_ipd.py` para las 3 predicciones a futuro
 
 | Archivo S11 | Descripción |
 |---|---|
 | `sql/01_catalog_schema.sql` | Crea schema `ggrrr.s11_ipd` y tabla `deportistas_s3` |
-| `sql/02_carga_s3_a_tabla.py` | Conecta S3, lee CSV y carga 3,200 registros en Delta Lake |
+| `sql/02_carga_s3_a_tabla.py` | Conecta S3, lee CSV y carga registros en Delta Lake |
 | `sql/03_genie_agents_consultas.py` | 5 consultas SQL con `%sql` para notebook Databricks |
 | `sql/04_consultas_ipd.sql` | 5 consultas SQL puras para el SQL Editor de Databricks |
+| `sql/05_predicciones_ipd.py` | 3 predicciones a futuro con Python + regresión lineal |
