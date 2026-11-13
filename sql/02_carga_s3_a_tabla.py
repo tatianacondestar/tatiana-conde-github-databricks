@@ -1,8 +1,4 @@
 # Databricks notebook source
-# /// script
-# [tool.databricks.environment]
-# environment_version = "6"
-# ///
 # MAGIC %md
 # MAGIC # S11 — IPD: Conexión S3 → ggrrr.s11_ipd.deportistas_s3
 # MAGIC **Sesión 11 | Databricks: S3 y Genie Agents**
@@ -13,25 +9,33 @@
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Paso 1: Configurar credenciales AWS para Spark (s3a://)
+# MAGIC ## Paso 1: Leer CSV desde S3 con URL pre-firmada (Serverless compatible)
 
 # COMMAND ----------
+
+import boto3, pandas as pd, io, requests
 
 # Credenciales AWS — no subir al repo
 AWS_KEY    = ""   # tu Access Key ID
 AWS_SECRET = ""   # tu Secret Access Key
 BUCKET     = "tatiana-conde-databricks"
 REGION     = "us-east-2"
+KEY        = "golden/ipd/ipd_deportistas_real.csv"
 
-# Configurar Spark para leer desde S3 con s3a://
-spark.conf.set("fs.s3a.access.key",        AWS_KEY)
-spark.conf.set("fs.s3a.secret.key",        AWS_SECRET)
-spark.conf.set("fs.s3a.endpoint.region",   REGION)
-spark.conf.set("fs.s3a.aws.credentials.provider",
-               "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider")
+# Generar URL pre-firmada (válida 1 hora, no requiere spark.conf)
+s3 = boto3.client(
+    's3',
+    region_name          = REGION,
+    aws_access_key_id    = AWS_KEY,
+    aws_secret_access_key= AWS_SECRET
+)
 
-S3_PATH = f"s3a://{BUCKET}/golden/ipd/ipd_deportistas_real.csv"
-print(f"Ruta S3: {S3_PATH}")
+url = s3.generate_presigned_url(
+    'get_object',
+    Params     = {'Bucket': BUCKET, 'Key': KEY},
+    ExpiresIn  = 3600
+)
+print("URL pre-firmada generada OK")
 
 # COMMAND ----------
 
@@ -40,10 +44,10 @@ print(f"Ruta S3: {S3_PATH}")
 
 # COMMAND ----------
 
-files = dbutils.fs.ls(f"s3a://{BUCKET}/golden/ipd/")
+response = s3.list_objects_v2(Bucket=BUCKET, Prefix='golden/ipd/')
 print("Archivos en S3:")
-for f in files:
-    print(f"  {f.name} — {round(f.size/1024, 2)} KB")
+for obj in response.get('Contents', []):
+    print(f"  {obj['Key']} — {round(obj['Size']/1024, 2)} KB")
 
 # COMMAND ----------
 
@@ -52,12 +56,10 @@ for f in files:
 
 # COMMAND ----------
 
-df_ipd = (spark.read
-    .option("header", "true")
-    .option("inferSchema", "true")
-    .option("encoding", "UTF-8")
-    .csv(S3_PATH)
-)
+# Descargar CSV via URL pre-firmada y convertir a Spark DataFrame
+resp     = requests.get(url)
+df_pandas = pd.read_csv(io.BytesIO(resp.content))
+df_ipd   = spark.createDataFrame(df_pandas)
 
 print(f"Registros leidos: {df_ipd.count()}")
 df_ipd.printSchema()
