@@ -86,3 +86,7 @@ SELECT
   ) AS ranking_anio
 FROM ggrrr.s11_ipd.deportistas_s3
 ORDER BY anio DESC, ranking_anio;
+
+
+SELECT COUNT(*) AS total FROM ggrrr.s11_ipd.deportistas_s3;
+
