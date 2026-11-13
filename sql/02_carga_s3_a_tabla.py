@@ -9,24 +9,25 @@
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Paso 1: Conectar con Amazon S3 usando boto3
+# MAGIC ## Paso 1: Configurar credenciales AWS para Spark (s3a://)
 
 # COMMAND ----------
 
-import boto3, pandas as pd, io
-
-# Reemplaza con tus credenciales AWS IAM (no subir al repo)
-AWS_KEY    = ""  # tu Access Key ID
-AWS_SECRET = ""  # tu Secret Access Key
+# Credenciales AWS — no subir al repo
+AWS_KEY    = ""   # tu Access Key ID
+AWS_SECRET = ""   # tu Secret Access Key
 BUCKET     = "tatiana-conde-databricks"
 REGION     = "us-east-2"
 
-s3 = boto3.client('s3',
-    region_name=REGION,
-    aws_access_key_id=AWS_KEY,
-    aws_secret_access_key=AWS_SECRET
-)
-print(f"Conexion S3 lista: s3://{BUCKET}/golden/ipd/")
+# Configurar Spark para leer desde S3 con s3a://
+spark.conf.set("fs.s3a.access.key",        AWS_KEY)
+spark.conf.set("fs.s3a.secret.key",        AWS_SECRET)
+spark.conf.set("fs.s3a.endpoint.region",   REGION)
+spark.conf.set("fs.s3a.aws.credentials.provider",
+               "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider")
+
+S3_PATH = f"s3a://{BUCKET}/golden/ipd/ipd_deportistas_real.csv"
+print(f"Ruta S3: {S3_PATH}")
 
 # COMMAND ----------
 
@@ -35,10 +36,10 @@ print(f"Conexion S3 lista: s3://{BUCKET}/golden/ipd/")
 
 # COMMAND ----------
 
-response = s3.list_objects_v2(Bucket=BUCKET, Prefix='golden/ipd/')
+files = dbutils.fs.ls(f"s3a://{BUCKET}/golden/ipd/")
 print("Archivos en S3:")
-for obj in response.get('Contents', []):
-    print(f"  {obj['Key']} — {round(obj['Size']/1024,2)} KB")
+for f in files:
+    print(f"  {f.name} — {round(f.size/1024, 2)} KB")
 
 # COMMAND ----------
 
@@ -47,19 +48,16 @@ for obj in response.get('Contents', []):
 
 # COMMAND ----------
 
-obj     = s3.get_object(Bucket=BUCKET, Key='golden/ipd/ipd_deportistas_real.csv')
-df_pandas = pd.read_csv(io.BytesIO(obj['Body'].read()))
-df_ipd  = spark.createDataFrame(df_pandas)
+df_ipd = (spark.read
+    .option("header", "true")
+    .option("inferSchema", "true")
+    .option("encoding", "UTF-8")
+    .csv(S3_PATH)
+)
 
 print(f"Registros leidos: {df_ipd.count()}")
-df_ipd.show(50, truncate=False)
-
-# COMMAND ----------
-
-# df_ipd ya esta definido en la celda anterior
-print(f"Registros IPD: {df_ipd.count()}")
 df_ipd.printSchema()
-df_ipd.show(10)
+df_ipd.show(10, truncate=False)
 
 # COMMAND ----------
 
@@ -98,4 +96,4 @@ print("Tabla guardada: ggrrr.s11_ipd.deportistas_s3")
 # MAGIC ## Pipeline completado
 # MAGIC - Bucket S3: `s3://tatiana-conde-databricks/golden/ipd/`
 # MAGIC - Tabla Delta: `ggrrr.s11_ipd.deportistas_s3`
-# MAGIC - 50 deportistas IPD cargados correctamente
+# MAGIC - Deportistas IPD cargados correctamente
