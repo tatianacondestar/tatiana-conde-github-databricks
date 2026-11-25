@@ -14,40 +14,34 @@
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Paso 1: Configurar credenciales AWS
+# MAGIC ## Paso 1: Configurar credenciales AWS en Spark
 # MAGIC
 # MAGIC Ingresa tus credenciales de la cuenta AWS activa (AWS Details → Show).
 # MAGIC **No subir credenciales al repositorio.**
 
 # COMMAND ----------
 
-import boto3, pandas as pd, io, requests
-
 # ── Credenciales AWS (completar con los valores de AWS Details) ──────────────
-AWS_KEY     = ""   # Access Key ID
-AWS_SECRET  = ""   # Secret Access Key
-AWS_TOKEN   = ""   # Session Token (si usas voclabs / lab account)
+AWS_KEY    = ""   # Access Key ID       ej: ASIA...
+AWS_SECRET = ""   # Secret Access Key
+AWS_TOKEN  = ""   # Session Token (requerido en voclabs)
 
-BUCKET  = "tatiana-conde-databrickss"   # nuevo bucket
-REGION  = "us-east-1"
-KEY     = "golden/ipd/ipd_deportistas_real.csv"
+BUCKET = "tatiana-conde-databrickss"
+REGION = "us-east-1"
+KEY    = "golden/ipd/ipd_deportistas_real.csv"
 # ─────────────────────────────────────────────────────────────────────────────
 
-s3_client = boto3.client(
-    's3',
-    region_name           = REGION,
-    aws_access_key_id     = AWS_KEY,
-    aws_secret_access_key = AWS_SECRET,
-    **({"aws_session_token": AWS_TOKEN} if AWS_TOKEN else {}),
-)
+# Configurar credenciales en Spark (método nativo — funciona en Serverless)
+spark.conf.set("fs.s3a.access.key",    AWS_KEY)
+spark.conf.set("fs.s3a.secret.key",    AWS_SECRET)
+spark.conf.set("fs.s3a.session.token", AWS_TOKEN)
+spark.conf.set("fs.s3a.endpoint",      f"s3.{REGION}.amazonaws.com")
+spark.conf.set("fs.s3a.aws.credentials.provider",
+               "org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider")
 
-# Verificar conexión
-try:
-    s3_client.head_bucket(Bucket=BUCKET)
-    print(f"✅ Conexión exitosa con bucket: {BUCKET}")
-except Exception as e:
-    raise RuntimeError(f"❌ Error al conectar con S3: {e}\n"
-                       "→ Verifica que las credenciales sean correctas y el bucket exista.")
+print(f"✅ Credenciales configuradas para bucket: {BUCKET}")
+print(f"   Región: {REGION}")
+print(f"   Archivo: {KEY}")
 
 # COMMAND ----------
 
@@ -56,51 +50,14 @@ except Exception as e:
 
 # COMMAND ----------
 
-response = s3_client.list_objects_v2(Bucket=BUCKET, Prefix="golden/ipd/")
-contenidos = response.get("Contents", [])
-
-if contenidos:
-    print(f"Archivos en s3://{BUCKET}/golden/ipd/")
-    for obj in contenidos:
-        print(f"  Archivo: {obj['Key']}")
-        print(f"  Tamaño : {round(obj['Size']/1024, 2)} KB")
-        print(f"  Bucket : {BUCKET}")
-else:
-    print(f"⚠️  No se encontraron archivos en s3://{BUCKET}/golden/ipd/")
-    print("   → Ejecuta primero el paso de carga del CSV (celda siguiente).")
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Paso 2b: Subir CSV al bucket S3 (solo si el bucket está vacío)
-# MAGIC
-# MAGIC Ejecuta esta celda **una sola vez** para cargar el archivo Gold al nuevo bucket.
-
-# COMMAND ----------
-
-import urllib.request, tempfile, os
-
-# URL pública del CSV en GitHub (rama main)
-CSV_GITHUB_URL = (
-    "https://raw.githubusercontent.com/tatianacondestar/"
-    "tatiana-conde-github-databricks/main/volumen/ipd_deportistas_real.csv"
-)
-
-# Descargar desde GitHub
-print("Descargando CSV desde GitHub...")
-resp_gh = requests.get(CSV_GITHUB_URL, timeout=30)
-resp_gh.raise_for_status()
-csv_bytes = resp_gh.content
-print(f"  Tamaño descargado: {round(len(csv_bytes)/1024, 2)} KB")
-
-# Subir a S3
-s3_client.put_object(
-    Bucket      = BUCKET,
-    Key         = KEY,
-    Body        = csv_bytes,
-    ContentType = "text/csv",
-)
-print(f"✅ Archivo subido a s3://{BUCKET}/{KEY}")
+files = dbutils.fs.ls(f"s3a://{BUCKET}/golden/ipd/")
+print(f"Archivos en s3a://{BUCKET}/golden/ipd/")
+print(f"{'Nombre':<45} {'Tamaño (KB)':>12}")
+print("-" * 60)
+for f in files:
+    size_kb = round(f.size / 1024, 2)
+    print(f"  Archivo: {f.name:<40} {size_kb:>8} KB")
+    print(f"  Bucket : {BUCKET}")
 
 # COMMAND ----------
 
@@ -109,19 +66,13 @@ print(f"✅ Archivo subido a s3://{BUCKET}/{KEY}")
 
 # COMMAND ----------
 
-# Generar URL pre-firmada (válida 1 hora, compatible con Serverless)
-url_presignada = s3_client.generate_presigned_url(
-    "get_object",
-    Params    = {"Bucket": BUCKET, "Key": KEY},
-    ExpiresIn = 3600,
-)
-print("URL pre-firmada generada OK")
+S3_PATH = f"s3a://{BUCKET}/{KEY}"
 
-# Descargar y convertir a Spark DataFrame
-resp      = requests.get(url_presignada, timeout=60)
-resp.raise_for_status()
-df_pandas = pd.read_csv(io.BytesIO(resp.content))
-df_ipd    = spark.createDataFrame(df_pandas)
+df_ipd = spark.read \
+    .option("header", "true") \
+    .option("inferSchema", "true") \
+    .option("encoding", "UTF-8") \
+    .csv(S3_PATH)
 
 print(f"✅ Registros leídos desde S3 Gold: {df_ipd.count()}")
 df_ipd.printSchema()
@@ -194,7 +145,7 @@ print("✅ Tabla guardada: ggrrr.s11_ipd.deportistas_s3")
 # MAGIC | Elemento | Valor |
 # MAGIC |----------|-------|
 # MAGIC | Bucket S3 | `s3://tatiana-conde-databrickss/golden/ipd/` |
-# MAGIC | Archivo Gold | `ipd_deportistas_real.csv` (50 registros) |
+# MAGIC | Archivo Gold | `ipd_deportistas_real.csv` (3319 registros) |
 # MAGIC | Catalog | `ggrrr` |
 # MAGIC | Schema | `s11_ipd` |
 # MAGIC | Tabla Delta | `deportistas_s3` |
