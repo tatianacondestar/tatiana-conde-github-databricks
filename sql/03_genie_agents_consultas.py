@@ -1,4 +1,8 @@
 # Databricks notebook source
+# /// script
+# [tool.databricks.environment]
+# environment_version = "6"
+# ///
 # MAGIC %md
 # MAGIC # S11 — IPD: 5 Consultas con Genie Agents (AI)
 # MAGIC **Sesión 11 | Databricks: S3 y Genie Agents**
