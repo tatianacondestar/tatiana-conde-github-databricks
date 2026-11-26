@@ -25,24 +25,34 @@
 
 # COMMAND ----------
 
+# DBTITLE 1,Paso 1: Configurar credenciales AWS (boto3)
 # ── Credenciales AWS (completar con los valores de AWS Details → Show) ───────
-AWS_KEY    = ""   # Access Key ID       ej: ASIA...
-AWS_SECRET = ""   # Secret Access Key
-AWS_TOKEN  = ""   # Session Token (requerido en voclabs)
+AWS_KEY    = ""
+AWS_SECRET = ""
+AWS_TOKEN  = ""
 
 BUCKET = "tatiana-conde-databrickss"
 REGION = "us-east-1"
 KEY    = "golden/ipd/ipd_deportistas_real.csv"
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Configurar credenciales via Hadoop config (compatible con Serverless y Classic)
-hadoop_conf = sc._jsc.hadoopConfiguration()
-hadoop_conf.set("fs.s3a.access.key",    AWS_KEY)
-hadoop_conf.set("fs.s3a.secret.key",    AWS_SECRET)
-hadoop_conf.set("fs.s3a.session.token", AWS_TOKEN)
-hadoop_conf.set("fs.s3a.endpoint",      f"s3.{REGION}.amazonaws.com")
-hadoop_conf.set("fs.s3a.aws.credentials.provider",
-                "org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider")
+# Configurar credenciales via boto3 (compatible con Serverless)
+import boto3
+
+session = boto3.Session(
+    aws_access_key_id=AWS_KEY,
+    aws_secret_access_key=AWS_SECRET,
+    aws_session_token=AWS_TOKEN,
+    region_name=REGION,
+)
+s3_client = session.client("s3", region_name=REGION)
+
+# URL firmada (presigned) para leer el CSV — compatible con Serverless
+S3_URL = s3_client.generate_presigned_url(
+    "get_object",
+    Params={"Bucket": BUCKET, "Key": KEY},
+    ExpiresIn=3600,
+)
 
 print(f"✅ Credenciales configuradas para bucket: {BUCKET}")
 print(f"   Región: {REGION}")
@@ -55,13 +65,14 @@ print(f"   Archivo: {KEY}")
 
 # COMMAND ----------
 
-files = dbutils.fs.ls(f"s3a://{BUCKET}/golden/ipd/")
-print(f"Archivos en s3a://{BUCKET}/golden/ipd/")
+# DBTITLE 1,Paso 2: Verificar archivos en S3 (boto3)
+resp = s3_client.list_objects_v2(Bucket=BUCKET, Prefix="golden/ipd/")
+print(f"Archivos en s3://{BUCKET}/golden/ipd/")
 print(f"{'Nombre':<45} {'Tamaño (KB)':>12}")
 print("-" * 60)
-for f in files:
-    size_kb = round(f.size / 1024, 2)
-    print(f"  Archivo: {f.name:<40} {size_kb:>8} KB")
+for obj in resp.get("Contents", []):
+    size_kb = round(obj["Size"] / 1024, 2)
+    print(f"  Archivo: {obj['Key']:<40} {size_kb:>8} KB")
     print(f"  Bucket : {BUCKET}")
 
 # COMMAND ----------
@@ -71,13 +82,13 @@ for f in files:
 
 # COMMAND ----------
 
-S3_PATH = f"s3a://{BUCKET}/{KEY}"
-
-df_ipd = spark.read \
-    .option("header", "true") \
-    .option("inferSchema", "true") \
-    .option("encoding", "UTF-8") \
-    .csv(S3_PATH)
+# DBTITLE 1,Paso 3: Leer CSV Gold (copia local del repo)
+# Leer el CSV Gold desde la copia local del repo
+# (S3 directo no es accesible desde Serverless: fs.s3a bloqueado, egress cerrado;
+#  el archivo es el mismo Gold subido a S3 en el commit 46a0b32)
+import pandas as pd
+CSV_LOCAL = "/Workspace/Users/tatiana.conde@vallegrande.edu.pe/tatiana-conde-github-databricks/volumen/ipd_deportistas_real.csv"
+df_ipd = spark.createDataFrame(pd.read_csv(CSV_LOCAL))
 
 print(f"✅ Registros leídos desde S3 Gold: {df_ipd.count()}")
 df_ipd.printSchema()
