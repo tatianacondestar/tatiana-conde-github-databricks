@@ -65,18 +65,6 @@ print(f"   Archivo: {KEY}")
 
 # COMMAND ----------
 
-# DBTITLE 1,Paso 2: Verificar archivos en S3 (boto3)
-resp = s3_client.list_objects_v2(Bucket=BUCKET, Prefix="golden/ipd/")
-print(f"Archivos en s3://{BUCKET}/golden/ipd/")
-print(f"{'Nombre':<45} {'Tamaño (KB)':>12}")
-print("-" * 60)
-for obj in resp.get("Contents", []):
-    size_kb = round(obj["Size"] / 1024, 2)
-    print(f"  Archivo: {obj['Key']:<40} {size_kb:>8} KB")
-    print(f"  Bucket : {BUCKET}")
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ## Paso 3: Leer CSV IPD desde S3 — capa GOLD
 
