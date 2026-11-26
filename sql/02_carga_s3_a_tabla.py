@@ -21,7 +21,7 @@
 
 # COMMAND ----------
 
-# ── Credenciales AWS (completar con los valores de AWS Details) ──────────────
+# ── Credenciales AWS (completar con los valores de AWS Details → Show) ───────
 AWS_KEY    = ""   # Access Key ID       ej: ASIA...
 AWS_SECRET = ""   # Secret Access Key
 AWS_TOKEN  = ""   # Session Token (requerido en voclabs)
@@ -31,13 +31,14 @@ REGION = "us-east-1"
 KEY    = "golden/ipd/ipd_deportistas_real.csv"
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Configurar credenciales en Spark (método nativo — funciona en Serverless)
-spark.conf.set("fs.s3a.access.key",    AWS_KEY)
-spark.conf.set("fs.s3a.secret.key",    AWS_SECRET)
-spark.conf.set("fs.s3a.session.token", AWS_TOKEN)
-spark.conf.set("fs.s3a.endpoint",      f"s3.{REGION}.amazonaws.com")
-spark.conf.set("fs.s3a.aws.credentials.provider",
-               "org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider")
+# Configurar credenciales via Hadoop config (compatible con Serverless y Classic)
+hadoop_conf = sc._jsc.hadoopConfiguration()
+hadoop_conf.set("fs.s3a.access.key",    AWS_KEY)
+hadoop_conf.set("fs.s3a.secret.key",    AWS_SECRET)
+hadoop_conf.set("fs.s3a.session.token", AWS_TOKEN)
+hadoop_conf.set("fs.s3a.endpoint",      f"s3.{REGION}.amazonaws.com")
+hadoop_conf.set("fs.s3a.aws.credentials.provider",
+                "org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider")
 
 print(f"✅ Credenciales configuradas para bucket: {BUCKET}")
 print(f"   Región: {REGION}")
